@@ -1,4 +1,9 @@
-public abstract class PhysicalEntity
+using UnityEngine;
+
+namespace Classes
 {
-    public float Weight { get; set; }
+    public abstract class PhysicalEntity : BaseEntity
+    {
+        public float Weight { get; set; }
+    }
 }
