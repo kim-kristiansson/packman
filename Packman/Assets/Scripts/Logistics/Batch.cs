@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Classes
+namespace Logistics
 {
     public class Batch : MonoBehaviour
     {

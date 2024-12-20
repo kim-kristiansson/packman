@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: 576b81e25e8e4780b263f0cf5c56e33c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - fixtureBase: {fileID: 3537094955186761647, guid: 575a751fea7d7c84b97946283ceb3e55, type: 3}
+  - fixtureStick: {fileID: 1678700813529664549, guid: 5c8e071e71ebd264f8faffbab750fa27, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,6 +1,4 @@
-using UnityEngine;
-
-namespace Classes
+namespace Core
 {
     public abstract class PhysicalEntity : BaseEntity
     {

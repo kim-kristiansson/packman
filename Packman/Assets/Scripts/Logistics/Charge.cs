@@ -1,9 +1,8 @@
 using UnityEngine;
 
-namespace Classes
+namespace Logistics
 {
     public class Charge : MonoBehaviour
     {
-        public Fixture Fixture { get; set; }
     }
 }
