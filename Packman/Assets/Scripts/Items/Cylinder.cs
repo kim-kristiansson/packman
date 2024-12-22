@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace Items
@@ -8,44 +7,29 @@ namespace Items
     {
         private CapsuleCollider _collider;
 
-        // Use a property to ensure the collider is always properly referenced
-        private CapsuleCollider Collider
-        {
-            get
-            {
-                if (_collider != null) return _collider;
-                _collider = GetComponent<CapsuleCollider>();
-                if (_collider == null)
-                    throw new Exception("Cylinder prefab does not have a CapsuleCollider component!");
-
-                return _collider;
-            }
-        }
+        private CapsuleCollider Collider => _collider != null ? _collider : _collider = GetComponent<CapsuleCollider>();
 
         public float Diameter => Collider.radius * 2;
 
         public float Radius => Collider.radius;
 
-        public float Height => Collider.height;
+        public float Height => Collider.height; // Use this property instead of GetHeight()
 
         private void Awake()
         {
-            // Ensure the CapsuleCollider component is initialized
             _collider = GetComponent<CapsuleCollider>();
         }
 
-        public void InstantiateAt(Vector3 position, Transform parent = null)
+        public void Spawn(Vector3 position, Transform parent = null)
         {
             Instantiate(this, position, Quaternion.identity, parent);
         }
 
         public void SetScale(float newDiameter, float newHeight)
         {
-            // Adjust the collider and the transform scale to fit the desired dimensions
             Collider.radius = newDiameter / 2;
             Collider.height = newHeight;
-
-            transform.localScale = Vector3.one; // Ensure no unwanted scaling issues
+            transform.localScale = Vector3.one; // Reset scale issues
         }
     }
 }

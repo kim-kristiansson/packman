@@ -31,5 +31,10 @@ namespace TestPlates
 
             Debug.Log($"SpawnArea spawned at {_spawnAreaInstance.transform.position}.");
         }
+
+        public SpawnArea GetSpawnAreaInstance()
+        {
+            return _spawnAreaInstance;
+        }
     }
 }

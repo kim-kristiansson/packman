@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SpawnAreas
@@ -8,6 +9,7 @@ namespace SpawnAreas
         private MeshCollider _collider;
         private Mesh _mesh;
         private Vector3[] _vertices;
+        private List<Vector3> _precomputedPoints;
 
         private void Awake()
         {
@@ -40,44 +42,48 @@ namespace SpawnAreas
                 }
             }
 
-            // Offset the max point inward to ensure the cylinder's edge stays inside
+            // Offset inward for cylinder radius
             maxXPoint.x -= cylinderRadius;
-            Debug.Log($"Adjusted Max X point of the spawn area: {maxXPoint}");
             return maxXPoint;
         }
 
-
         public bool IsPointInside(Vector3 point)
         {
-            if (_collider == null)
-            {
-                Debug.LogError("No collider found on SpawnArea.");
-                return false;
-            }
+            if (_collider == null) return false;
 
-            // Check if the point is within the collider's bounding box
-            var bounds = _collider.bounds;
-            if (!bounds.Contains(point))
-            {
-                Debug.Log($"Point {point} is outside the collider bounds: {bounds}");
-                return false;
-            }
+            // Bounds check
+            if (!_collider.bounds.Contains(point)) return false;
 
-            // Fallback to raycasting for additional validation
+            // Raycast fallback
             var rayOrigin = point + Vector3.up * 10;
             var rayDirection = Vector3.down;
 
-            Debug.DrawRay(rayOrigin, rayDirection * 20f, Color.cyan, 5.0f);
-
             if (Physics.Raycast(rayOrigin, rayDirection, out var hit, 20f, 1 << gameObject.layer))
-            {
-                var isInside = hit.collider == _collider;
-                Debug.Log($"Raycast hit at {hit.point}, Is inside: {isInside}");
-                return isInside;
-            }
+                return hit.collider == _collider;
 
-            Debug.Log("Raycast did not hit the spawn area.");
             return false;
         }
+
+        public List<Vector3> PrecomputeValidSpawnPoints(float cylinderDiameter)
+        {
+            _precomputedPoints = new List<Vector3>();
+            var bounds = _collider.bounds;
+            var step = cylinderDiameter * 0.1f; // Adjust granularity
+
+            for (var x = bounds.min.x; x <= bounds.max.x; x += step)
+            {
+                for (var z = bounds.min.z; z <= bounds.max.z; z += step)
+                {
+                    var point = new Vector3(x, bounds.min.y, z);
+                    if (IsPointInside(point))
+                        _precomputedPoints.Add(point);
+                }
+            }
+
+            Debug.Log($"Precomputed {_precomputedPoints.Count} valid points.");
+            return _precomputedPoints;
+        }
+
+        public List<Vector3> GetPrecomputedPoints() => _precomputedPoints;
     }
 }
