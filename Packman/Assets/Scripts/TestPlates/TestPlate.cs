@@ -8,10 +8,13 @@ namespace TestPlates
         [Header("Spawn Area Settings")] [Tooltip("Prefab of the spawn area to be instantiated.")]
         public SpawnArea spawnAreaPrefab;
 
+        private int _layerMask;
+
         private SpawnArea _spawnAreaInstance;
 
         private void Awake()
         {
+            _layerMask = 1 << gameObject.layer;
             SpawnSpawnArea();
         }
 
@@ -23,10 +26,8 @@ namespace TestPlates
                 return;
             }
 
-            // If the spawn area already exists, destroy it
             if (_spawnAreaInstance != null) Destroy(_spawnAreaInstance.gameObject);
 
-            // Spawn the spawn area in the center of the TestPlate
             _spawnAreaInstance = Instantiate(spawnAreaPrefab, transform.localPosition, Quaternion.identity, transform);
 
             Debug.Log($"SpawnArea spawned at {_spawnAreaInstance.transform.position}.");
@@ -35,6 +36,15 @@ namespace TestPlates
         public SpawnArea GetSpawnAreaInstance()
         {
             return _spawnAreaInstance;
+        }
+
+        public bool IsColliding(Vector3 position, float radius)
+        {
+            var overlaps = Physics.OverlapSphere(position, radius, _layerMask);
+
+            if (overlaps.Length <= 0) return false;
+            Debug.Log($"Collision detected with TestPlate at {position}.");
+            return true;
         }
     }
 }

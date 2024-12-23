@@ -8,8 +8,8 @@ namespace SpawnAreas
     {
         private MeshCollider _collider;
         private Mesh _mesh;
-        private Vector3[] _vertices;
         private List<Vector3> _precomputedPoints;
+        private Vector3[] _vertices;
 
         private void Awake()
         {
@@ -26,7 +26,7 @@ namespace SpawnAreas
             Debug.Log($"Spawn area initialized with {_vertices.Length} vertices.");
         }
 
-        public Vector3 GetMaxXPoint(float cylinderRadius)
+        public Vector3 GetMaxXPoint()
         {
             var maxX = float.MinValue;
             var maxXPoint = Vector3.zero;
@@ -35,55 +35,31 @@ namespace SpawnAreas
             {
                 var worldVertex = transform.TransformPoint(vertex);
 
-                if (worldVertex.x > maxX)
-                {
-                    maxX = worldVertex.x;
-                    maxXPoint = worldVertex;
-                }
+                if (!(worldVertex.x > maxX)) continue;
+                maxX = worldVertex.x;
+                maxXPoint = worldVertex;
             }
 
-            // Offset inward for cylinder radius
-            maxXPoint.x -= cylinderRadius;
             return maxXPoint;
         }
 
         public bool IsPointInside(Vector3 point)
         {
-            if (_collider == null) return false;
-
-            // Bounds check
-            if (!_collider.bounds.Contains(point)) return false;
-
-            // Raycast fallback
-            var rayOrigin = point + Vector3.up * 10;
-            var rayDirection = Vector3.down;
-
-            if (Physics.Raycast(rayOrigin, rayDirection, out var hit, 20f, 1 << gameObject.layer))
-                return hit.collider == _collider;
-
-            return false;
-        }
-
-        public List<Vector3> PrecomputeValidSpawnPoints(float cylinderDiameter)
-        {
-            _precomputedPoints = new List<Vector3>();
-            var bounds = _collider.bounds;
-            var step = cylinderDiameter * 0.1f; // Adjust granularity
-
-            for (var x = bounds.min.x; x <= bounds.max.x; x += step)
+            if (_collider == null)
             {
-                for (var z = bounds.min.z; z <= bounds.max.z; z += step)
-                {
-                    var point = new Vector3(x, bounds.min.y, z);
-                    if (IsPointInside(point))
-                        _precomputedPoints.Add(point);
-                }
+                Debug.LogError("SpawnArea is missing a collider.");
+                return false;
             }
 
-            Debug.Log($"Precomputed {_precomputedPoints.Count} valid points.");
-            return _precomputedPoints;
-        }
+            var bounds = _collider.bounds;
+            if (!bounds.Contains(point))
+            {
+                Debug.Log($"Point {point} is outside the spawn area bounds: {bounds}");
+                return false;
+            }
 
-        public List<Vector3> GetPrecomputedPoints() => _precomputedPoints;
+            Debug.Log($"Point {point} is inside the spawn area bounds.");
+            return true;
+        }
     }
 }

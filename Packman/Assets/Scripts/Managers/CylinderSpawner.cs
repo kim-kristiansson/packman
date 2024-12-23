@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Items;
 using SpawnAreas;
 using TestPlates;
@@ -13,114 +15,123 @@ namespace Managers
 
         [Header("Parent Container")] public Transform parentContainer;
 
-        [Header("Debug Settings")] public bool enableDebugMode = true;
-
-        private SpawnArea _spawnArea;
+        private readonly List<Vector3> _spawnedCylinderPositions = new();
 
         private void Start()
         {
-            if (testPlate == null)
-            {
-                Debug.LogError("TestPlate is not assigned!");
-                return;
-            }
-
-            _spawnArea = testPlate.GetSpawnAreaInstance();
-            if (_spawnArea == null)
-            {
-                Debug.LogError("No SpawnArea found on the TestPlate.");
-                return;
-            }
-
-            SpawnCylinder();
+            SpawnCylinderOnMaxX();
         }
 
-        private void DebugLog(string message)
+        private void SpawnCylinderOnMaxX()
         {
-            if (enableDebugMode)
-                Debug.Log(message);
-        }
-
-        private void SpawnCylinder()
-        {
-            if (_spawnArea == null || cylinderPrefab == null)
+            if (cylinderPrefab == null)
             {
                 Debug.LogError("Spawn area or cylinder prefab is not assigned!");
                 return;
             }
 
-            // Get the initial maxX point
-            var cylinderDiameter = cylinderPrefab.Diameter;
-            var maxXPoint = _spawnArea.GetMaxXPoint(cylinderDiameter / 2);
-            DebugLog($"Starting from maxX point: {maxXPoint}");
+            var spawnArea = testPlate.GetSpawnAreaInstance();
+            var maxXPoint = spawnArea.GetMaxXPoint();
 
-            // Move along -x axis and find a valid position
-            var validPosition = FindValidPosition(maxXPoint, Vector3.left, cylinderDiameter);
+            var firstPosition = PlaceWhenNoCollision(maxXPoint, Vector3.left, cylinderPrefab.Radius, spawnArea);
 
-            if (validPosition.HasValue)
+            if (!firstPosition.HasValue)
             {
-                DebugLog($"Found valid position at: {validPosition.Value}");
-                InstantiateCylinder(validPosition.Value);
+                Debug.LogWarning("No valid position found to spawn the cylinder.");
+                return;
             }
-            else
-            {
-                Debug.LogError("No valid position found to spawn the cylinder.");
-            }
+
+            var offsetDirection = Quaternion.Euler(0, -120f, 0) * Vector3.right;
+
+            var stepSize = 1.001f * cylinderPrefab.Diameter;
+            PlaceCylindersAlongPath(firstPosition.Value, offsetDirection, cylinderPrefab.Radius,
+                spawnArea, stepSize);
         }
 
-        private Vector3? FindValidPosition(Vector3 startPoint, Vector3 direction, float cylinderDiameter)
+        private void PlaceCylindersAlongPath(Vector3 startPosition, Vector3 direction, float radius,
+            SpawnArea spawnArea, float stepSize)
         {
-            var currentPosition = startPoint;
-            var radius = cylinderDiameter / 2;
+            var currentPosition = startPosition;
 
-            while (_spawnArea.IsPointInside(currentPosition))
+            for (var i = 0; i < 1000; i++)
             {
-                // Check for collisions
-                if (IsPositionClear(currentPosition, radius))
+                var nextPosition = GetNextStep(currentPosition, direction, stepSize);
+
+                if (!IsValidStep(nextPosition, radius, spawnArea))
                 {
-                    DebugLog($"Position {currentPosition} is clear and within bounds.");
-                    return currentPosition; // Return the first valid position found
+                    Debug.LogWarning("No valid position found, stopping placement.");
+                    return;
                 }
 
-                DebugLog($"Position {currentPosition} is not valid. Moving in direction {direction}.");
-                currentPosition += direction * (cylinderDiameter * 0.1f); // Increment position
+                InstantiateCylinder(nextPosition);
+                Debug.Log($"Spawned cylinder at position: {nextPosition}");
+
+                currentPosition = nextPosition;
             }
 
-            DebugLog("No valid position found within the spawn area.");
-            return null; // No valid position found
+            Debug.LogError("Maximum steps reached! Stopping to prevent infinite loop.");
         }
 
-        private bool IsPositionClear(Vector3 position, float radius)
+        private Vector3? PlaceWhenNoCollision(Vector3 startPoint, Vector3 direction, float radius, SpawnArea spawnArea)
         {
-            var collisionLayer = LayerMask.GetMask("TestPlate");
+            var currentPosition = startPoint;
 
-            // Use Physics.OverlapSphere to check for collisions at the position
-            var overlaps = Physics.OverlapSphere(position, radius, collisionLayer);
-
-            if (overlaps.Length > 0)
+            for (var step = 0; step < 10000; step++)
             {
-                DebugLog($"Collision detected at {position}. Overlap count: {overlaps.Length}");
-                return false;
+                currentPosition = GetNextStep(currentPosition, direction, 0.01f);
+
+                if (!IsValidStep(currentPosition, radius, spawnArea)) continue;
+
+                InstantiateCylinder(currentPosition);
+                Debug.Log($"Cylinder placed at {currentPosition} after {step + 1} steps.");
+                return currentPosition;
             }
 
-            DebugLog($"No collision detected at {position}.");
-            return true;
+            Debug.LogError(
+                $"Maximum steps reached. Could not place a cylinder starting from {startPoint} in direction {direction}.");
+            return null;
+        }
+
+        private bool IsCollidingWithOtherCylinders(Vector3 position, float radius)
+        {
+            foreach (var spawnedPosition in _spawnedCylinderPositions.Where(spawnedPosition =>
+                         Vector3.Distance(position, spawnedPosition) < radius * 2))
+            {
+                Debug.Log($"Position {position} is colliding with existing cylinder at {spawnedPosition}.");
+                return true;
+            }
+
+            return false;
         }
 
         private void InstantiateCylinder(Vector3 position)
         {
-            if (parentContainer == null)
+            Instantiate(cylinderPrefab, position, Quaternion.identity, parentContainer);
+            _spawnedCylinderPositions.Add(position);
+        }
+
+        private static Vector3 GetNextStep(Vector3 currentPosition, Vector3 direction, float stepSize)
+        {
+            Debug.DrawRay(currentPosition, direction.normalized * stepSize, Color.green, 60f);
+            var nextPosition = currentPosition + direction.normalized * stepSize;
+            return nextPosition;
+        }
+
+        private bool IsValidStep(Vector3 position, float radius, SpawnArea spawnArea)
+        {
+            if (!spawnArea.IsPointInside(position))
             {
-                Debug.LogError("Parent container is not assigned!");
-                return;
+                Debug.LogWarning($"Position {position} is outside the spawn area bounds.");
+                return false;
             }
 
-            // Adjust Y position to place the cylinder above the TestPlate
-            var cylinderHeight = cylinderPrefab.Height;
-            position.y = _spawnArea.GetComponent<MeshCollider>().bounds.max.y + cylinderHeight / 2;
+            if (!testPlate.IsColliding(position, radius) && !IsCollidingWithOtherCylinders(position, radius))
+                return true;
+            Debug.Log($"Position {position} is colliding. " +
+                      $"TestPlate: {testPlate.IsColliding(position, radius)}, " +
+                      $"Other Cylinders: {IsCollidingWithOtherCylinders(position, radius)}");
 
-            cylinderPrefab.Spawn(position, parentContainer);
-            DebugLog($"Spawned cylinder at {position}.");
+            return false;
         }
     }
 }
