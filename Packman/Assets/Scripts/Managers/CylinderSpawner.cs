@@ -48,6 +48,16 @@ namespace Managers
                 spawnArea, stepSize);
         }
 
+        private Vector3? TakeOneStep(Vector3 currentPosition, Vector3 direction, float radius, SpawnArea spawnArea,
+            float stepSize)
+        {
+            var nextPosition = GetNextStep(currentPosition, direction, stepSize);
+
+            if (IsValidStep(nextPosition, radius, spawnArea)) return nextPosition;
+            Debug.LogWarning($"Next position {nextPosition} is not valid.");
+            return null;
+        }
+
         private void PlaceCylindersAlongPath(Vector3 startPosition, Vector3 direction, float radius,
             SpawnArea spawnArea, float stepSize)
         {
