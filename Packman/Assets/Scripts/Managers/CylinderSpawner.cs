@@ -41,11 +41,29 @@ namespace Managers
                 return;
             }
 
-            var offsetDirection = Quaternion.Euler(0, -120f, 0) * Vector3.right;
-
             var stepSize = 1.001f * cylinderPrefab.Diameter;
-            PlaceCylindersAlongPath(firstPosition.Value, offsetDirection, cylinderPrefab.Radius,
-                spawnArea, stepSize);
+            var newColumnUpDirection = Quaternion.Euler(0, -120f, 0) * Vector3.left;
+            var newColumnDownDirection = Quaternion.Euler(0, -120f, 0) * Vector3.right;
+            var newRowDirection = Vector3.left;
+
+            var rowPosition = firstPosition;
+
+            for (var i = 0; i < 100; i++)
+            {
+                if (!rowPosition.HasValue)
+                {
+                    Debug.LogWarning("No valid position found to spawn the cylinder.");
+                    return;
+                }
+
+                PlaceCylindersAlongPath(rowPosition.Value, newColumnUpDirection, cylinderPrefab.Radius,
+                    spawnArea, stepSize);
+                PlaceCylindersAlongPath(rowPosition.Value, newColumnDownDirection, cylinderPrefab.Radius,
+                    spawnArea, stepSize);
+
+                rowPosition = TakeOneStep(rowPosition.Value, newRowDirection, cylinderPrefab.Radius, spawnArea,
+                    stepSize);
+            }
         }
 
         private Vector3? TakeOneStep(Vector3 currentPosition, Vector3 direction, float radius, SpawnArea spawnArea,
@@ -53,7 +71,12 @@ namespace Managers
         {
             var nextPosition = GetNextStep(currentPosition, direction, stepSize);
 
-            if (IsValidStep(nextPosition, radius, spawnArea)) return nextPosition;
+            if (IsValidStep(nextPosition, radius, spawnArea))
+            {
+                InstantiateCylinder(nextPosition);
+                return nextPosition;
+            }
+
             Debug.LogWarning($"Next position {nextPosition} is not valid.");
             return null;
         }
